@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>My Python Tools — Launcher</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="wrap">
+        <header>
+            <img src="https://tse4.mm.bing.net/th/id/OIP.h2IjCn7wRGNMj1CoEGAfdwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+                alt="tools">
+            <div>
+                <h1>My Python Tools</h1>
+                <p class="muted">Launch and inspect the small utilities you wrote in Python — grouped by category.</p>
+            </div>
+        </header>
+
+        <div class="filters" id="categoryFilters"></div>
+
+        <section>
+            <div class="grid" id="toolsGrid"></div>
+        </section>
+
+        <aside style="display:flex;gap:18px;margin-top:18px">
+            <div style="flex:1">
+                <div class="details" id="inspector">
+                    <h3 id="inspectorTitle">Select a tool</h3>
+                    <p id="inspectorDesc" class="muted">Click any card to view details and run it.</p>
+                    <div style="height:12px"></div>
+                    <div id="inspectorBody" class="muted">No selection</div>
+                </div>
+            </div>
+            <div style="width:320px">
+                <div class="details">
+                    <h4>Preview</h4>
+                    <div id="previewArea" class="muted" style="min-height:120px;margin-top:10px">Nothing yet</div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // Tool registry (same as before)
+        const toolCategories = [
+            {
+                name: 'Professional Tools', tools: [
+                    { name: 'CVSense.py', desc: 'Resume / CV utilities', file: 'CVSense.py' }
+                ]
+            },
+            {
+                name: 'Productivity Tools', tools: [
+                    { name: 'WPM.py', desc: 'Words-per-minute tester', file: 'WPM.py' },
+                    { name: 'To-Do List.py', desc: 'Simple todo manager', file: 'To-Do List.py' },
+                    { name: 'Alarm Clock.py', desc: 'Set alarms', file: 'Alarm Clock.py' },
+                    { name: 'Password Generator.py', desc: 'Generate strong passwords', file: 'Password Generator.py' }
+                ]
+            },
+            {
+                name: 'Gaming Tools', tools: [
+                    { name: 'Roulette Wheel.py', desc: 'Roulette simulator', file: 'Roulette Wheel.py' },
+                    { name: 'Guess the Number.py', desc: 'Number guessing game', file: 'Guess the Number.py' },
+                    { name: 'Coin toss.py', desc: 'Flip a coin', file: 'Coin toss.py' },
+                    { name: 'Rock Paper Scissors.py', desc: 'Classic RPS', file: 'Rock Paper Scissors.py' }
+                ]
+            },
+            {
+                name: 'Conversion Tools', tools: [
+                    { name: 'Unit Conversion.py', desc: 'Convert units', file: 'Unit Conversion.py' },
+                    { name: 'BMI Calculator.py', desc: 'Calculate BMI', file: 'BMI Calculator.py' },
+                    { name: 'Basic Calculator.py', desc: 'Simple calculator', file: 'Basic Calculator.py' }
+                ]
+            },
+            {
+                name: 'PDF Tools', tools: [
+                    { name: 'PDF Merger.py', desc: 'Merge PDF files', file: 'PDF Merger.py' },
+                    { name: 'PDF Coverter.py', desc: 'Convert PDFs', file: 'PDF Coverter.py' }
+                ]
+            }
+        ];
+
+        const grid = document.getElementById('toolsGrid');
+        const filters = document.getElementById('categoryFilters');
+        const inspectorTitle = document.getElementById('inspectorTitle');
+        const inspectorDesc = document.getElementById('inspectorDesc');
+        const inspectorBody = document.getElementById('inspectorBody');
+        const preview = document.getElementById('previewArea');
+
+        let activeCategory = 'All';
+
+        function buildFilters() {
+            const allChip = createChip('All', true);
+            filters.appendChild(allChip);
+            toolCategories.forEach(c => {
+                filters.appendChild(createChip(c.name));
+            });
+        }
+
+        function createChip(name, active = false) {
+            const el = document.createElement('div');
+            el.className = 'chip' + (active ? ' active' : '');
+            el.innerText = name;
+            el.onclick = () => {
+                document.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
+                el.classList.add('active');
+                activeCategory = name;
+                renderGrid();
+            };
+            return el;
+        }
+
+        function renderGrid() {
+            grid.innerHTML = '';
+            const items = [];
+            if (activeCategory === 'All') {
+                toolCategories.forEach(c => c.tools.forEach(t => items.push(Object.assign({}, t, { category: c.name }))));
+            } else {
+                const cat = toolCategories.find(c => c.name === activeCategory);
+                if (cat) cat.tools.forEach(t => items.push(Object.assign({}, t, { category: cat.name })));
+            }
+
+            items.forEach(it => {
+                const card = document.createElement('div'); card.className = 'card';
+
+                // build inner structure
+                card.innerHTML = `
+          <div class="row" style="justify-content:space-between">
+            <div>
+              <div class="icon" style="background:linear-gradient(180deg,#fef3c7,#fff9db)">📄</div>
+            </div>
+            <div class="muted small">${escapeHtml(it.category)}</div>
+          </div>
+          <div>
+            <h3 class="card-title">${escapeHtml(it.name)}</h3>
+            <p>${escapeHtml(it.desc)}</p>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+            <div style="font-size:12px;color:var(--muted)">${escapeHtml(it.file)}</div>
+            <div>
+              <button class="run">Open</button>
+            </div>
+          </div>
+        `;
+
+                // clicking the entire card title area selects it (inspector) — not required to open
+                const titleEl = card.querySelector('.card-title');
+                if (titleEl) {
+                    titleEl.style.cursor = 'pointer';
+                    titleEl.addEventListener('click', () => selectTool(it.category, it.name, it.file));
+                }
+
+                // Open button launches immediately
+                const btn = card.querySelector('button.run');
+                if (btn) {
+                    btn.addEventListener('click', () => {
+                        // prevent accidental scrolling / focusing behavior
+                        runTool(it.file);
+                    });
+                }
+
+                grid.appendChild(card);
+            });
+        }
+
+        // helper to escape HTML
+        function escapeHtml(str) {
+            if (str === undefined || str === null) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        // selection and preview for inspector
+        function selectTool(category, name, file) {
+            inspectorTitle.innerText = name;
+            inspectorDesc.innerText = category;
+            inspectorBody.innerHTML = `
+        <div style="margin-top:8px">Filename: <strong>${escapeHtml(file)}</strong></div>
+        <div style="margin-top:8px"><button class="run" id="simulateRun">Run</button>
+         <button class="run" id="diagRun" style="margin-left:8px;background:#f3f4f6;color:#111">Diagnostics</button>
+        </div>
+      `;
+
+            const simBtn = document.getElementById('simulateRun');
+            if (simBtn) {
+                simBtn.addEventListener('click', () => runTool(file));
+            }
+
+            const diagBtn = document.getElementById('diagRun');
+            if (diagBtn) {
+                diagBtn.addEventListener('click', () => runDiagnostics(file));
+            }
+
+            preview.innerText = `Preview for ${name}\n\nClick Open to launch the tool immediately. Use Diagnostics to capture stdout/stderr if it fails.`;
+        }
+        window.selectTool = selectTool;
+
+        // call backend to run tool
+        function runTool(file) {
+            preview.innerText = `Launching ${file} ...`;
+            fetch('/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file })
+            }).then(r => r.json()).then(j => {
+                if (j.ok) {
+                    preview.innerText = 'Launched: ' + file;
+                } else {
+                    preview.innerText = 'ERROR: ' + (j.error || j.message);
+                }
+            }).catch(e => {
+                preview.innerText = 'Connection error: could not reach backend (is server.py running?)';
+            });
+        }
+        window.runTool = runTool;
+
+        // diagnostics fetch
+        function runDiagnostics(file) {
+            preview.innerText = `Running diagnostics for ${file} ... (this may take a few seconds)`;
+            fetch('/diagnostics', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file })
+            }).then(r => r.json()).then(j => {
+                if (!j.ok) {
+                    preview.innerText = 'ERROR: ' + (j.error || 'diagnostics failed');
+                    return;
+                }
+                const res = j.result;
+                let out = '';
+                if (res.returncode !== undefined) out += 'Return code: ' + res.returncode + '\n';
+                if (res.stdout) out += 'STDOUT:\n' + res.stdout + '\n';
+                if (res.stderr) out += 'STDERR:\n' + res.stderr + '\n';
+                if (res.error) out += JSON.stringify(res);
+                // show in preview area (you can copy-paste)
+                preview.innerText = out || 'No output captured';
+            }).catch(e => {
+                preview.innerText = 'Diagnostics connection error';
+            });
+        }
+        window.runDiagnostics = runDiagnostics;
+
+        // init
+        buildFilters(); renderGrid();
+    </script>
+</body>
+
+</html>
